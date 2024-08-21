@@ -8,7 +8,7 @@ NeoRenderer::NeoRenderer(QWidget *parent) : QOpenGLWidget{parent}
 
     m_RenderTimer = new QTimer(this);
     connect(m_RenderTimer, &QTimer::timeout, this, &NeoRenderer::RendererLoop);
-    m_RenderTimer->start(16);
+    m_RenderTimer->start(33);
 }
 
 void NeoRenderer::LoadSceneObject(SceneObject *t_ScnObject)
@@ -54,6 +54,7 @@ void NeoRenderer::CameraSetPerspective()
 void NeoRenderer::RendererLoop()
 {
     //Should probably call update here.
+    update();
 }
 
 
