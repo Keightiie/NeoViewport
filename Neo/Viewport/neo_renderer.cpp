@@ -2,13 +2,13 @@
 
 #include <QOpenGLTexture>
 
-NeoRenderer::NeoRenderer(QWidget *parent) : QOpenGLWidget{parent}
+NeoRenderer::NeoRenderer(int t_fps, QWidget *parent) : QOpenGLWidget{parent}
 {
     m_TextureLoader = new TextureManager();
 
     m_RenderTimer = new QTimer(this);
     connect(m_RenderTimer, &QTimer::timeout, this, &NeoRenderer::RendererLoop);
-    m_RenderTimer->start(33);
+    m_RenderTimer->start(t_fps / 1000);
 }
 
 void NeoRenderer::LoadSceneObject(SceneObject *t_ScnObject)

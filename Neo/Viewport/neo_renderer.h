@@ -16,7 +16,7 @@ class NeoRenderer : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 public:
-    NeoRenderer(QWidget *parent = nullptr);
+    NeoRenderer(int t_fps, QWidget *parent = nullptr);
 
     void RendererUpdate();
     void DisableAutoUpdates();
