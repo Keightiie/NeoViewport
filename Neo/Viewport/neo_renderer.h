@@ -8,9 +8,24 @@
 #include <QMatrix4x4>
 #include <QTimer>
 
+#include <Neo/OpenGL/camera_data.h>
 #include <Neo/OpenGL/mesh_data.h>
 
 #include <Neo/Managers/texture_manager.h>
+
+enum eDebugKeyInputs
+{
+    DbgKeyForward,
+    DbgKeyBack,
+    DbgKeyLeft,
+    DbgKeyRight,
+    DbgKeyUp,
+    DbgKeyDown,
+    DbgCamRotateLeft,
+    DbgCamRotateRight,
+    DbgCamRotateUp,
+    DbgCamRotateDown
+};
 
 class NeoRenderer : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -31,6 +46,14 @@ public:
     //To-Do: Rename to ClearScene();
     void ClearViewport();
     void LoadSceneObject(SceneObject *t_ScnObject);
+
+    // Input (Temporary)
+    void ToggleFreecam(bool t_toggle);
+    void ClearDebugKeys();
+    void PressDebugKey(eDebugKeyInputs l_key);
+    void ReleaseDebugKey(eDebugKeyInputs l_key);
+
+    void SetCamera(CameraData *t_Camera);
 
 public:
     //Setting
@@ -55,8 +78,7 @@ protected:
 
 private:
     //Camera Functions (TEMP)
-    void CameraSetOrtho();
-    void CameraSetPerspective();
+    void UpdateFreeCam();
 
     //Rendering Code
     void RenderMesh(MeshData *l_Mesh);
@@ -74,6 +96,7 @@ private slots:
 private:
     QHash<QString, bool> m_QueuedAction = {};
 
+    bool m_IsFreecam = false;
     bool m_InUpdate = false;
     bool m_AutoUpdate = true;
 
@@ -81,6 +104,7 @@ private:
     QTimer *m_RenderTimer = nullptr;
 
     //Cameras
+    CameraData *m_CurrentCamera = nullptr;
     QVector3D m_CameraForward;
     QVector3D m_CameraTransform = {0, 0, 0};
     QVector3D m_CameraRotation = {0, 0, 0};
@@ -91,6 +115,6 @@ private:
 
 
     QList<SceneObject *> m_LoadedOBJ = {};
+    QHash<eDebugKeyInputs, bool> m_PressedKeys = {};
 };
-
 #endif // NEO_RENDERER_H

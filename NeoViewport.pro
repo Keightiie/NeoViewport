@@ -12,6 +12,7 @@ CONFIG += c++17
 SOURCES += \
     Neo/Managers/model_manager.cpp \
     Neo/Managers/texture_manager.cpp \
+    Neo/OpenGL/camera_data.cpp \
     Neo/OpenGL/mesh_data.cpp \
     Neo/Viewport/neo_renderer.cpp \
     Neo/readers/models/obj_model_reader.cpp
@@ -19,6 +20,7 @@ SOURCES += \
 HEADERS += \
     Neo/Managers/model_manager.h \
     Neo/Managers/texture_manager.h \
+    Neo/OpenGL/camera_data.h \
     Neo/OpenGL/mesh_data.h \
     Neo/Viewport/neo_renderer.h \
     Neo/readers/models/obj_model_reader.h

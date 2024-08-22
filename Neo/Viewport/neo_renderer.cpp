@@ -4,11 +4,20 @@
 
 NeoRenderer::NeoRenderer(int t_fps, QWidget *parent) : QOpenGLWidget{parent}
 {
-    m_TextureLoader = new TextureManager();
 
-    m_RenderTimer = new QTimer(this);
-    connect(m_RenderTimer, &QTimer::timeout, this, &NeoRenderer::RendererLoop);
-    m_RenderTimer->start(t_fps / 1000);
+    //QSurfaceFormat l_SurfaceFormat;
+    //l_SurfaceFormat.setSwapInterval(1);
+    //l_SurfaceFormat.setSamples(4);
+    //setFormat(l_SurfaceFormat);
+
+    m_TextureLoader = new TextureManager();
+    m_CurrentCamera = new CameraData();
+    if(t_fps != -1)
+    {
+        m_RenderTimer = new QTimer(this);
+        connect(m_RenderTimer, &QTimer::timeout, this, &NeoRenderer::RendererLoop);
+        m_RenderTimer->start(t_fps / 1000);
+    }
 }
 
 void NeoRenderer::LoadSceneObject(SceneObject *t_ScnObject)
@@ -16,10 +25,37 @@ void NeoRenderer::LoadSceneObject(SceneObject *t_ScnObject)
     m_LoadedOBJ.append(t_ScnObject);
 }
 
+void NeoRenderer::ToggleFreecam(bool t_toggle)
+{
+    m_IsFreecam = t_toggle;
+}
+
+void NeoRenderer::ClearDebugKeys()
+{
+    m_PressedKeys.clear();
+}
+
+void NeoRenderer::PressDebugKey(eDebugKeyInputs l_key)
+{
+    m_PressedKeys[l_key] = true;
+}
+
+void NeoRenderer::ReleaseDebugKey(eDebugKeyInputs l_key)
+{
+    m_PressedKeys[l_key] = false;
+}
+
+void NeoRenderer::SetCamera(CameraData *t_Camera)
+{
+    m_CurrentCamera = t_Camera;
+}
+
 void NeoRenderer::initializeGL()
 {
+    //glEnable(GL_MULTISAMPLE);
     initializeOpenGLFunctions();
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
 }
 
 void NeoRenderer::resizeGL(int w, int h)
@@ -32,23 +68,28 @@ void NeoRenderer::paintGL()
     RendererUpdate();
 }
 
-void NeoRenderer::CameraSetOrtho()
+void NeoRenderer::UpdateFreeCam()
 {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, width(), 0, height(), -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
+    QVector3D l_CameraTranslate = QVector3D(0, 0, 0);
+    QVector3D l_CameraRotate = QVector3D(0, 0, 0);
 
-void NeoRenderer::CameraSetPerspective()
-{
-    QMatrix4x4 projection;
-    projection.perspective(45.0f, float(width()) / float(height()), 0.1f, 100.0f);
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(projection.constData());
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    l_CameraTranslate.setZ(l_CameraTranslate.z() + (m_PressedKeys[DbgKeyForward] ? 0.01 : 0));
+    l_CameraTranslate.setZ(l_CameraTranslate.z() + (m_PressedKeys[DbgKeyBack] ? -0.01 : 0));
+
+    l_CameraTranslate.setX(l_CameraTranslate.x() + (m_PressedKeys[DbgKeyLeft] ? 0.01 : 0));
+    l_CameraTranslate.setX(l_CameraTranslate.x() + (m_PressedKeys[DbgKeyRight] ? -0.01 : 0));
+
+    l_CameraTranslate.setY(l_CameraTranslate.y() + (m_PressedKeys[DbgKeyDown] ? 0.01 : 0));
+    l_CameraTranslate.setY(l_CameraTranslate.y() + (m_PressedKeys[DbgKeyUp] ? -0.01 : 0));
+
+    l_CameraRotate.setX(l_CameraRotate.x() + (m_PressedKeys[DbgCamRotateUp] ? -1 : 0));
+    l_CameraRotate.setX(l_CameraRotate.x() + (m_PressedKeys[DbgCamRotateDown] ? 1 : 0));
+
+    l_CameraRotate.setY(l_CameraRotate.y() + (m_PressedKeys[DbgCamRotateRight] ? 1 : 0));
+    l_CameraRotate.setY(l_CameraRotate.y() + (m_PressedKeys[DbgCamRotateLeft] ? -1 : 0));
+
+    TranslateTransform(l_CameraTranslate);
+    TranslateRotation(l_CameraRotate);
 }
 
 void NeoRenderer::RendererLoop()
@@ -60,17 +101,16 @@ void NeoRenderer::RendererLoop()
 
 void NeoRenderer::RenderMesh(MeshData *l_Mesh)
 {
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
-
     QList<FaceData *> l_FacesNoAlpha = l_Mesh->getFacesFiltered(false);
     QList<FaceData *> l_FacesAlpha = l_Mesh->getFacesFiltered(true);
 
-    std::sort(l_FacesAlpha.begin(), l_FacesAlpha.end(), [&](FaceData * a, FaceData * b)
-    {
-        return DistanceFromCamera(m_CameraTransform, a->GetCenter()) > DistanceFromCamera(m_CameraTransform, b->GetCenter());
-    });
+    //std::sort(l_FacesAlpha.begin(), l_FacesAlpha.end(), [&](FaceData * a, FaceData * b)
+    //{
+    //    return DistanceFromCamera(m_CameraTransform, a->GetCenter()) > DistanceFromCamera(m_CameraTransform, b->GetCenter());
+    //});
+
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 
     // Render opaque faces first
     RenderFaces(l_Mesh, l_FacesNoAlpha);
@@ -82,11 +122,9 @@ void NeoRenderer::RenderMesh(MeshData *l_Mesh)
     glDisable(GL_BLEND);
 
 
-    // Cleanup
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+
 }
 
 void NeoRenderer::RenderFaces(MeshData *l_Mesh, QList<FaceData *> l_Faces)
@@ -129,13 +167,8 @@ void NeoRenderer::RenderFaces(MeshData *l_Mesh, QList<FaceData *> l_Faces)
 
 void NeoRenderer::RenderBackground(QString l_Background)
 {
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_LIGHTING);
-    glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
-
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     m_TextureLoader->GetTexture(l_Background)->bind();
 
     glBegin(GL_QUADS);
@@ -144,10 +177,6 @@ void NeoRenderer::RenderBackground(QString l_Background)
     glTexCoord2f(1, 1); glVertex2f(width(), height());
     glTexCoord2f(0, 1); glVertex2f(0, height());
     glEnd();
-
-    glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_TEXTURE_2D);
 }
 
 bool NeoRenderer::WithinFOV(QVector3D l_Object)
@@ -226,16 +255,19 @@ void NeoRenderer::WaitForUpdateFinish()
 void NeoRenderer::RendererUpdate()
 {
     if(m_InUpdate) return;
+    if(m_IsFreecam) UpdateFreeCam();
 
     m_InUpdate = true;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    CameraSetPerspective();
+    //CameraSetPerspective();
+    m_CurrentCamera->UpdateCamera(width(), height());
 
     glRotatef(m_CameraRotation.x(), 1.0f, 0.0f, 0.0f);
     glRotatef(m_CameraRotation.y(), 0.0f, 1.0f, 0.0f);
     glRotatef(m_CameraRotation.z(), 0.0f, 0.0f, 1.0f);
     glTranslatef(m_CameraTransform.x(), m_CameraTransform.y(), m_CameraTransform.z());
+
 
     for(SceneObject *l_ScenObj : m_LoadedOBJ)
     {
@@ -261,10 +293,15 @@ void NeoRenderer::RendererUpdate()
             glPopMatrix();
         }
     }
-    CameraSetOrtho();
+
+    m_CurrentCamera->CameraCleanup();
+
+    //Replace this with a user-interface system.
+    m_CurrentCamera->UpdateCameraOrtho(width(), height());
 
     if(!m_OverlayImage.trimmed().isEmpty()) RenderBackground(m_OverlayImage);
 
+    m_CurrentCamera->CameraCleanupOrtho();
     m_InUpdate = false;
 }
 
