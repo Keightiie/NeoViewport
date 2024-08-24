@@ -1,10 +1,16 @@
 #ifndef MESH_DATA_H
 #define MESH_DATA_H
 
+#include <Neo/Managers/texture_manager.h>
 #include <QList>
+#include <QOpenGLBuffer>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLVertexArrayObject>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
+#include <gl/GL.h>
 
 enum eFacesType
 {
@@ -32,12 +38,18 @@ private:
     bool m_UsesAlpha = false;
 };
 
-struct VertexData
+struct GLVertexData
 {
     QVector3D m_Position;
     QVector2D m_TexCoord;
-    MaterialData *m_Material;
 };
+
+struct GLMeshData
+{
+    int m_StartingIndex;
+    int m_IndexLength;
+};
+
 
 class FaceData
 {
@@ -80,7 +92,7 @@ private:
 };
 
 
-class MeshData
+class MeshData : protected QOpenGLFunctions
 {
 public:
     MeshData();
@@ -98,9 +110,6 @@ public:
     QList<QVector2D> getTexCords() { return m_TextureCords; }
     eFacesType getFaceType(){ return m_FaceType; }
 
-    QList<VertexData> getVertextData() const { return m_CachedVertex; }
-
-
     void SetVerticies(QList<QVector3D>  t_verts)
     {
         m_Vertices = t_verts;
@@ -114,17 +123,33 @@ public:
 
     void CacheVertexBuffer();
 
+    void Initialize();
+    void DrawMesh(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t_textureManager, int t_debug = 0);
+
+    QString GetMaterialPath();
+
 private:
+    MaterialData *m_Material = nullptr;
     QList<FaceData*> m_Faces = {};
     QList<FaceData*> m_FacesFilterAlpha = {};
     QList<FaceData*> m_FacesFilterNoAlpha = {};
+    QHash<int, QList<GLMeshData>> m_LoadOrder = {};
 
     QList<QVector3D> m_Vertices = {};
     QList<QVector2D> m_TextureCords = {};
-    QList<VertexData> m_CachedVertex = {};
-
+    QStringList m_TextureNames = {};
+    QList<QOpenGLTexture *> m_Textures = {};
 
     eFacesType m_FaceType = faceQuad;
+
+    QVector<GLVertexData> m_GLVertices;
+    QVector<GLushort> m_GLIndices;
+    std::vector<GLuint> m_GLTextures;
+    QOpenGLFunctions *m_GLFunctions;
+
+    QOpenGLBuffer arrayBuf;
+    QOpenGLBuffer indexBuf;
+
 };
 
 

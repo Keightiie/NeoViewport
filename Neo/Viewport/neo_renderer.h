@@ -7,10 +7,10 @@
 #include <QWidget>
 #include <QMatrix4x4>
 #include <QTimer>
+#include <QOpenGLShaderProgram>
 
 #include <Neo/OpenGL/camera_data.h>
 #include <Neo/OpenGL/mesh_data.h>
-
 #include <Neo/Managers/texture_manager.h>
 
 enum eDebugKeyInputs
@@ -27,10 +27,13 @@ enum eDebugKeyInputs
     DbgCamRotateDown
 };
 
+class MeshData;
+
 class NeoRenderer : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
 public:
+    using QOpenGLWidget::QOpenGLWidget;
     NeoRenderer(int t_fps, QWidget *parent = nullptr);
 
     void RendererUpdate();
@@ -42,6 +45,7 @@ public:
 
     //To-Do: Create a UserInterface system instead.
     void SetOverlay(QString t_overlay);
+    void SetDebugValue(int l_dbg);
 
     //To-Do: Rename to ClearScene();
     void ClearViewport();
@@ -77,12 +81,13 @@ protected:
     void paintGL() override;
 
 private:
+    void initShaders();
+    void initTextures();
+
     //Camera Functions (TEMP)
     void UpdateFreeCam();
 
     //Rendering Code
-    void RenderMesh(MeshData *l_Mesh);
-    void RenderFaces(MeshData *l_Mesh, QList<FaceData*> l_Faces);
     void RenderBackground(QString l_Background);
 
     //Other
@@ -112,9 +117,17 @@ private:
     TextureManager *m_TextureLoader = nullptr;
 
     QString m_OverlayImage = "";
+    QOpenGLShaderProgram m_ShaderProgram;
+
+    MeshData *m_DebugMesh = nullptr;
 
 
     QList<SceneObject *> m_LoadedOBJ = {};
     QHash<eDebugKeyInputs, bool> m_PressedKeys = {};
+
+
+    QMatrix4x4 l_CameraProjection;
+
+    int m_DebugValue = 0;
 };
 #endif // NEO_RENDERER_H

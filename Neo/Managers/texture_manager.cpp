@@ -18,7 +18,7 @@ void TextureManager::LoadTexture(QString l_Path)
         return;
     }
 
-    l_NewTexture->setMinificationFilter(QOpenGLTexture::Linear);
+    l_NewTexture->setMinificationFilter(QOpenGLTexture::Nearest);
     l_NewTexture->setMagnificationFilter(QOpenGLTexture::Linear);
     l_NewTexture->setWrapMode(QOpenGLTexture::Repeat);
 

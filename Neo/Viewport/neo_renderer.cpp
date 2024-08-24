@@ -5,10 +5,10 @@
 NeoRenderer::NeoRenderer(int t_fps, QWidget *parent) : QOpenGLWidget{parent}
 {
 
-    //QSurfaceFormat l_SurfaceFormat;
-    //l_SurfaceFormat.setSwapInterval(1);
-    //l_SurfaceFormat.setSamples(4);
-    //setFormat(l_SurfaceFormat);
+    QSurfaceFormat l_SurfaceFormat;
+    l_SurfaceFormat.setSwapInterval(1);
+    l_SurfaceFormat.setSamples(4);
+    setFormat(l_SurfaceFormat);
 
     m_TextureLoader = new TextureManager();
     m_CurrentCamera = new CameraData();
@@ -54,18 +54,54 @@ void NeoRenderer::initializeGL()
 {
     //glEnable(GL_MULTISAMPLE);
     initializeOpenGLFunctions();
+
+    initShaders();
+    initTextures();
+
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
+
+
+    m_DebugMesh = new MeshData();
+    m_DebugMesh->Initialize();
 }
 
 void NeoRenderer::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
+
+    qreal aspect = qreal(w) / qreal(h ? h : 1);
+    const qreal zNear = 0.5, zFar = 100.0, fov = 45.0;
+    l_CameraProjection.setToIdentity();
+    l_CameraProjection.perspective(fov, aspect, zNear, zFar);
 }
 
 void NeoRenderer::paintGL()
 {
+    glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
     RendererUpdate();
+}
+
+void NeoRenderer::initShaders()
+{
+    if (!m_ShaderProgram.addShaderFromSourceFile(QOpenGLShader::Vertex, "base/models/shaders/vshader.glsl"))
+        close();
+
+    if (!m_ShaderProgram.addShaderFromSourceFile(QOpenGLShader::Fragment, "base/models/shaders/fshader.glsl"))
+        close();
+
+    if (!m_ShaderProgram.link())
+        close();
+
+    if (!m_ShaderProgram.bind())
+        close();
+}
+
+void NeoRenderer::initTextures()
+{
+
 }
 
 void NeoRenderer::UpdateFreeCam()
@@ -94,75 +130,7 @@ void NeoRenderer::UpdateFreeCam()
 
 void NeoRenderer::RendererLoop()
 {
-    //Should probably call update here.
     update();
-}
-
-
-void NeoRenderer::RenderMesh(MeshData *l_Mesh)
-{
-    QList<FaceData *> l_FacesNoAlpha = l_Mesh->getFacesFiltered(false);
-    QList<FaceData *> l_FacesAlpha = l_Mesh->getFacesFiltered(true);
-
-    //std::sort(l_FacesAlpha.begin(), l_FacesAlpha.end(), [&](FaceData * a, FaceData * b)
-    //{
-    //    return DistanceFromCamera(m_CameraTransform, a->GetCenter()) > DistanceFromCamera(m_CameraTransform, b->GetCenter());
-    //});
-
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
-
-    // Render opaque faces first
-    RenderFaces(l_Mesh, l_FacesNoAlpha);
-
-    // Render transparent faces
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    RenderFaces(l_Mesh, l_FacesAlpha);
-    glDisable(GL_BLEND);
-
-
-    glDisable(GL_CULL_FACE);
-    glEnable(GL_DEPTH_TEST);
-
-}
-
-void NeoRenderer::RenderFaces(MeshData *l_Mesh, QList<FaceData *> l_Faces)
-{
-    MaterialData * l_LastMaterial = nullptr;
-
-    int l_FaceType = (l_Mesh->getFaceType() == faceTri) ? GL_TRIANGLES : GL_QUADS;
-
-    glBegin(l_FaceType);
-
-    for(FaceData *l_Vertex : l_Faces)
-    {
-        MaterialData * l_NewMaterial = l_Vertex->getMaterial();
-        if(l_LastMaterial != l_NewMaterial && l_NewMaterial != nullptr)
-        {
-            l_LastMaterial = l_NewMaterial;
-            glEnd();
-
-            QOpenGLTexture *l_Texture = m_TextureLoader->GetTexture(l_NewMaterial->getTexturePath());
-            if(l_Texture != nullptr) l_Texture->bind();
-            else glBindTexture(GL_TEXTURE_2D, 0);
-
-            glBegin(l_FaceType);
-
-        }
-        bool l_RenderTexCords = l_Vertex->GetTexCords().count() == l_Vertex->GetVerticies().count();
-        for(int i = 0; i < l_Vertex->GetVerticies().count(); i++)
-        {
-            if(l_RenderTexCords)
-            {
-                glTexCoord2f(l_Vertex->GetTexCords().at(i).x(), l_Vertex->GetTexCords().at(i).y());
-            }
-            glVertex3f(l_Vertex->GetVerticies().at(i).x(), l_Vertex->GetVerticies().at(i).y(), l_Vertex->GetVerticies().at(i).z());
-        }
-
-    }
-
-    glEnd();
 }
 
 void NeoRenderer::RenderBackground(QString l_Background)
@@ -226,6 +194,11 @@ void NeoRenderer::SetOverlay(QString t_overlay)
     m_OverlayImage = t_overlay;
 }
 
+void NeoRenderer::SetDebugValue(int l_dbg)
+{
+    m_DebugValue = l_dbg;
+}
+
 bool NeoRenderer::IsRendering()
 {
     return m_LoadedOBJ.count() > 0;
@@ -260,48 +233,29 @@ void NeoRenderer::RendererUpdate()
     m_InUpdate = true;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //CameraSetPerspective();
+
+    QMatrix4x4 matrix;
+    matrix.setToIdentity();
+    matrix.rotate(m_CameraRotation.z(), 0.0f, 0.0f, 1.0f);
+    matrix.rotate(m_CameraRotation.x(), 1.0f, 0.0f, 0.0f);
+    matrix.rotate(m_CameraRotation.y(), 0.0f, 1.0f, 0.0f);
+    matrix.translate(m_CameraTransform);
+
+
+    m_ShaderProgram.setUniformValue("mvp_matrix", l_CameraProjection * matrix);
+    m_ShaderProgram.setUniformValue("texture", 0);
+
     m_CurrentCamera->UpdateCamera(width(), height());
-
-    glRotatef(m_CameraRotation.x(), 1.0f, 0.0f, 0.0f);
-    glRotatef(m_CameraRotation.y(), 0.0f, 1.0f, 0.0f);
-    glRotatef(m_CameraRotation.z(), 0.0f, 0.0f, 1.0f);
-    glTranslatef(m_CameraTransform.x(), m_CameraTransform.y(), m_CameraTransform.z());
-
 
     for(SceneObject *l_ScenObj : m_LoadedOBJ)
     {
         if(l_ScenObj == nullptr) return;
         for(MeshData *l_Mesh : l_ScenObj->m_Mesh)
         {
-            if(l_Mesh == nullptr) return;
-            glPushMatrix();
-
-            glTranslatef(l_ScenObj->m_Transform.x(), l_ScenObj->m_Transform.y(), l_ScenObj->m_Transform.z());
-
-            if(l_ScenObj->m_IsBillboard)
-                glRotatef(-m_CameraRotation.y(), 0.0f, 1.0f, 0.0f);
-            else
-            {
-                glRotatef(l_ScenObj->m_Rotation.x(), 1.0f, 0.0f, 0.0f);
-                glRotatef(l_ScenObj->m_Rotation.y(), 0.0f, 1.0f, 0.0f);
-                glRotatef(l_ScenObj->m_Rotation.z(), 0.0f, 0.0f, 1.0f);
-            }
-
-            RenderMesh(l_Mesh);
-
-            glPopMatrix();
+            l_Mesh->DrawMesh(&m_ShaderProgram, m_TextureLoader, m_DebugValue);
         }
     }
 
-    m_CurrentCamera->CameraCleanup();
-
-    //Replace this with a user-interface system.
-    m_CurrentCamera->UpdateCameraOrtho(width(), height());
-
-    if(!m_OverlayImage.trimmed().isEmpty()) RenderBackground(m_OverlayImage);
-
-    m_CurrentCamera->CameraCleanupOrtho();
     m_InUpdate = false;
 }
 

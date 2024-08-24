@@ -9,6 +9,9 @@ CONFIG += c++17
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+
+INCLUDEPATH += $$PWD/3rd/imgui
+
 SOURCES += \
     Neo/Managers/model_manager.cpp \
     Neo/Managers/texture_manager.cpp \
@@ -30,3 +33,4 @@ unix {
     target.path = $$[QT_INSTALL_PLUGINS]/generic
 }
 !isEmpty(target.path): INSTALLS += target
+
