@@ -38,7 +38,7 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
         QVector2D l_UV(0, 0);
 
         QStringList UVParts = l_TexCords.split(' ');
-        UVParts.removeAll(" ");
+        UVParts.removeAll("");
         l_UV.setX(UVParts[1].toDouble());
         l_UV.setY(UVParts[2].toDouble());
 
@@ -63,7 +63,7 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
         }
 
         QStringList l_FaceParts = l_face.split(' ');
-        l_FaceParts.removeAll(" ");
+        l_FaceParts.removeAll("");
         if(l_FaceParts.count() != 4) continue;
 
         QStringList l_FaceData1 = l_FaceParts[1].split('/');
