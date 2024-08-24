@@ -3,7 +3,10 @@
 #include <qmatrix4x4.h>
 #include <QOpenGLWidget>
 
-CameraData::CameraData() {}
+CameraData::CameraData()
+{
+    m_CompTransform = new NeoTransform();
+}
 
 void CameraData::SetCameraType(eCameraType t_Type)
 {
@@ -13,6 +16,28 @@ void CameraData::SetCameraType(eCameraType t_Type)
 void CameraData::SetOrthographicScale(double t_scale)
 {
     l_OrthographicScale = t_scale;
+}
+
+void CameraData::UpdateMatrix(int t_width, int t_height)
+{
+    qreal aspect = qreal(t_width) / qreal(t_width ? t_height : 1);
+    m_ProjectionMatrix.setToIdentity();
+    m_ProjectionMatrix.perspective(m_FieldOfView, aspect, m_ClippingNear, m_ClippingFar);
+}
+
+QMatrix4x4 CameraData::GetProjectionMatrix()
+{
+    return m_ProjectionMatrix * m_CompTransform->GetMatrix();
+}
+
+NeoTransform *CameraData::GetTransform()
+{
+    return m_CompTransform;
+}
+
+QMatrix4x4 CameraData::GetTransformMatrix()
+{
+    return m_CompTransform->GetMatrix();
 }
 
 void CameraData::UpdateCamera(float t_width, float t_height)

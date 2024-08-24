@@ -18,7 +18,8 @@ SOURCES += \
     Neo/OpenGL/camera_data.cpp \
     Neo/OpenGL/mesh_data.cpp \
     Neo/Viewport/neo_renderer.cpp \
-    Neo/readers/models/obj_model_reader.cpp
+    Neo/readers/models/obj_model_reader.cpp \
+    Neo/scene/objects/components/neo_transform.cpp
 
 HEADERS += \
     Neo/Managers/model_manager.h \
@@ -26,7 +27,8 @@ HEADERS += \
     Neo/OpenGL/camera_data.h \
     Neo/OpenGL/mesh_data.h \
     Neo/Viewport/neo_renderer.h \
-    Neo/readers/models/obj_model_reader.h
+    Neo/readers/models/obj_model_reader.h \
+    Neo/scene/objects/components/neo_transform.h
 
 # Default rules for deployment.
 unix {

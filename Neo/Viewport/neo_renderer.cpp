@@ -69,11 +69,7 @@ void NeoRenderer::initializeGL()
 void NeoRenderer::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
-
-    qreal aspect = qreal(w) / qreal(h ? h : 1);
-    const qreal zNear = 0.5, zFar = 100.0, fov = 45.0;
-    l_CameraProjection.setToIdentity();
-    l_CameraProjection.perspective(fov, aspect, zNear, zFar);
+    m_CurrentCamera->UpdateMatrix(w, h);
 }
 
 void NeoRenderer::paintGL()
@@ -147,22 +143,6 @@ void NeoRenderer::RenderBackground(QString l_Background)
     glEnd();
 }
 
-bool NeoRenderer::WithinFOV(QVector3D l_Object)
-{
-    //This function doesn't currently behave as intended. Will redo it eventually.
-    QVector3D directionToObject = l_Object - m_CameraTransform;
-
-    QVector3D l_NormForward = m_CameraForward.normalized();
-    QVector3D l_NormDirection = directionToObject.normalized();
-
-    float dotProduct = QVector3D::dotProduct(l_NormForward, l_NormDirection);
-
-    if (dotProduct >= 0)
-    {
-        return true;
-    }
-    return false;
-}
 
 double NeoRenderer::DistanceFromCamera(const QVector3D &t_CameraPosition, const QVector3D &t_VertexPosition)
 {
@@ -171,22 +151,22 @@ double NeoRenderer::DistanceFromCamera(const QVector3D &t_CameraPosition, const 
 
 void NeoRenderer::TranslateTransform(QVector3D t_Transform)
 {
-    m_CameraTransform += t_Transform;
+    m_CurrentCamera->GetTransform()->TranslatePosition(t_Transform);
 }
 
 void NeoRenderer::TranslateRotation(QVector3D t_Transform)
 {
-    m_CameraRotation += t_Transform;
+    m_CurrentCamera->GetTransform()->TranslateRotation(t_Transform);
 }
 
 void NeoRenderer::SetTransform(QVector3D t_Transform)
 {
-    m_CameraTransform = t_Transform;
+    m_CurrentCamera->GetTransform()->SetPosition(t_Transform);
 }
 
 void NeoRenderer::SetRotation(QVector3D t_Transform)
 {
-    m_CameraRotation = t_Transform;
+    m_CurrentCamera->GetTransform()->SetRotation(t_Transform);
 }
 
 void NeoRenderer::SetOverlay(QString t_overlay)
@@ -234,15 +214,7 @@ void NeoRenderer::RendererUpdate()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-    QMatrix4x4 matrix;
-    matrix.setToIdentity();
-    matrix.rotate(m_CameraRotation.z(), 0.0f, 0.0f, 1.0f);
-    matrix.rotate(m_CameraRotation.x(), 1.0f, 0.0f, 0.0f);
-    matrix.rotate(m_CameraRotation.y(), 0.0f, 1.0f, 0.0f);
-    matrix.translate(m_CameraTransform);
-
-
-    m_ShaderProgram.setUniformValue("mvp_matrix", l_CameraProjection * matrix);
+    m_ShaderProgram.setUniformValue("mvp_matrix", m_CurrentCamera->GetProjectionMatrix());// * matrix);
     m_ShaderProgram.setUniformValue("texture", 0);
 
     m_CurrentCamera->UpdateCamera(width(), height());
@@ -261,10 +233,10 @@ void NeoRenderer::RendererUpdate()
 
 QVector3D NeoRenderer::GetTransform()
 {
-    return m_CameraTransform;
+    return m_CurrentCamera->GetTransform()->GetPosition();
 }
 
 QVector3D NeoRenderer::GetRotation()
 {
-    return m_CameraRotation;
+    return m_CurrentCamera->GetTransform()->GetRotation();
 }

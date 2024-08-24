@@ -110,9 +110,6 @@ private:
 
     //Cameras
     CameraData *m_CurrentCamera = nullptr;
-    QVector3D m_CameraForward;
-    QVector3D m_CameraTransform = {0, 0, 0};
-    QVector3D m_CameraRotation = {0, 0, 0};
 
     TextureManager *m_TextureLoader = nullptr;
 
@@ -124,9 +121,6 @@ private:
 
     QList<SceneObject *> m_LoadedOBJ = {};
     QHash<eDebugKeyInputs, bool> m_PressedKeys = {};
-
-
-    QMatrix4x4 l_CameraProjection;
 
     int m_DebugValue = 0;
 };
