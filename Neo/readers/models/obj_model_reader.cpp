@@ -10,14 +10,15 @@ ObjModelReader::ObjModelReader(QString l_filePath, QString l_fileName)
     ParseFile();
 }
 
-MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces, QStringList l_uvs, int l_StartingVert)
+MeshData *ObjModelReader::ParseMeshData(int l_StartingVert)
 {
     MeshData *l_NewMesh = new MeshData();
 
     QList<QVector3D> l_VertexList = {};
+    QList<QVector3D> l_NormalsList = {};
     QList<QVector2D> l_TexCordList = {};
 
-    for(QString l_Vert : l_verts)
+    for(QString l_Vert : m_LoadedLinesVertex)
     {
         QStringList parts = l_Vert.split(' ');
         parts.removeAll("");
@@ -33,7 +34,7 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
         l_VertexList.append(l_Transform);
     }
 
-    for(QString l_TexCords : l_uvs)
+    for(QString l_TexCords : m_LoadedLinesVertexTexCords)
     {
         QVector2D l_UV(0, 0);
 
@@ -46,12 +47,19 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
     }
 
 
+    for(QString l_NormalLine : m_LoadedLinesVertexNorms)
+    {
+        QStringList l_SplitLine = l_NormalLine.split(' ');
+        l_SplitLine.removeAll("");
+        l_NormalsList.append(QVector3D(l_SplitLine[1].toDouble(), l_SplitLine[2].toDouble(), l_SplitLine[3].toDouble()));
+    }
+
     QList<FaceData *> l_FacesList = {};
 
     MaterialData *l_CurrentMaterial = nullptr;
 
     int l_CurrentFaceIndex = 0;
-    for(QString l_face : l_faces)
+    for(QString l_face : m_LoadedLinesFaces)
     {
         if(m_FaceMaterialIndex.contains(l_CurrentFaceIndex))
         {
@@ -83,6 +91,10 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
         int TexCordindex2 = -1;
         int TexCordindex3 = -1;
 
+        int NormalIndex1 = -1;
+        int NormalIndex2 = -1;
+        int NormalIndex3 = -1;
+
         if(l_FaceData1.count() > 1 && !l_FaceData1[1].trimmed().isEmpty())
         {
             TexCordindex1 = l_FaceData1[1].toInt() - 1;
@@ -93,14 +105,30 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
             TexCordindex2 = l_FaceData2[1].toInt() - 1;
         }
 
-        if(l_FaceData3.count() > 1 && !l_FaceData3[1].trimmed().isEmpty())
+        if(l_FaceData3.count() > 2 && !l_FaceData3[1].trimmed().isEmpty())
         {
             TexCordindex3 = l_FaceData3[1].toInt() - 1;
         }
 
+        //Parse the Normals
+        if(l_FaceData1.count() > 2 && !l_FaceData1[2].trimmed().isEmpty())
+        {
+            NormalIndex1 = l_FaceData1[2].toInt() - 1;
+        }
+
+        if(l_FaceData2.count() > 2 && !l_FaceData2[2].trimmed().isEmpty())
+        {
+            NormalIndex2 = l_FaceData2[2].toInt() - 1;
+        }
+
+        if(l_FaceData3.count() > 2 && !l_FaceData3[2].trimmed().isEmpty())
+        {
+            NormalIndex3 = l_FaceData3[2].toInt() - 1;
+        }
 
         FaceData * l_NewFace = new FaceData(QVector4D(index1, index2, index3, 0), l_CurrentMaterial);
         l_NewFace->SetTexCordIndex(QVector4D(TexCordindex1, TexCordindex2, TexCordindex3, -1));
+        l_NewFace->SetNormalsIndex(QVector4D(NormalIndex1, NormalIndex2, NormalIndex3, -1));
 
         l_FacesList.append(l_NewFace);
 
@@ -109,6 +137,7 @@ MeshData *ObjModelReader::ParseMeshData(QStringList l_verts, QStringList l_faces
     l_NewMesh->SetFaceType(faceTri);
     l_NewMesh->SetFaces(l_FacesList);
     l_NewMesh->SetVerticies(l_VertexList);
+    l_NewMesh->SetNormals(l_NormalsList);
     l_NewMesh->SetTexCords(l_TexCordList);
 
     l_NewMesh->CacheVertexBuffer();
@@ -139,23 +168,19 @@ void ObjModelReader::ParseFile()
     QString l_currentMatFile = "";
 
     QString l_ObjectName = "";
-    QStringList l_VerticieLines = {};
-    QStringList l_FacesLines = {};
-    QStringList l_MaterialLines = {};
-    QStringList l_UVLines = {};
-
 
     QTextStream in(&file);
     int l_StartingVert = 1;
     while (!in.atEnd()) {
         QString line = in.readLine().trimmed();
-        if (line.startsWith("v ")) l_VerticieLines.append(line);
-        if (line.startsWith("f ")) l_FacesLines.append(line);
-        if (line.startsWith("vt ")) l_UVLines.append(line);
+        if (line.startsWith("v ")) m_LoadedLinesVertex.append(line);
+        if (line.startsWith("f ")) m_LoadedLinesFaces.append(line);
+        if (line.startsWith("vn ")) m_LoadedLinesVertexNorms.append(line);
+        if (line.startsWith("vt ")) m_LoadedLinesVertexTexCords.append(line);
         if (line.startsWith("usemtl "))
         {
             QString l_MatName = line.remove("usemtl ");
-            m_FaceMaterialIndex[l_FacesLines.count()] = l_MatName.trimmed();
+            m_FaceMaterialIndex[m_LoadedLinesFaces.count()] = l_MatName.trimmed();
         }
         if (line.startsWith("mtllib "))
         {
@@ -164,7 +189,7 @@ void ObjModelReader::ParseFile()
         }
     }
 
-    MeshData *l_MeshData = ParseMeshData(l_VerticieLines, l_FacesLines, l_UVLines, (l_StartingVert - 1));
+    MeshData *l_MeshData = ParseMeshData((l_StartingVert - 1));
     m_ParsedMeshData.append(l_MeshData);
 }
 

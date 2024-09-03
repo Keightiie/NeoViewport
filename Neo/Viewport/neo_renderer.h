@@ -12,6 +12,8 @@
 #include <Neo/OpenGL/camera_data.h>
 #include <Neo/OpenGL/mesh_data.h>
 #include <Neo/Managers/texture_manager.h>
+#include <Neo/scene/scene_data.h>
+#include <Neo/scene/scene_object.h>
 
 enum eDebugKeyInputs
 {
@@ -58,6 +60,7 @@ public:
     void ReleaseDebugKey(eDebugKeyInputs l_key);
 
     void SetCamera(CameraData *t_Camera);
+    void SetBoneMatrix(int l_BoneId, QMatrix4x4 l_matrix);
 
 public:
     //Setting
@@ -74,6 +77,9 @@ public:
     QVector3D GetTransform();
     QVector3D GetRotation();
 
+    SceneData *GetScene();
+    CameraData *GetCamera();
+
 protected:
     //OpenGL
     void initializeGL() override;
@@ -89,6 +95,7 @@ private:
 
     //Rendering Code
     void RenderBackground(QString l_Background);
+    void RenderBackground(QMatrix4x4 l_BoneTransform);
 
     //Other
     bool WithinFOV(QVector3D l_Object);
@@ -99,7 +106,7 @@ private slots:
     void RendererLoop();
 
 private:
-    QHash<QString, bool> m_QueuedAction = {};
+    QMap<QString, bool> m_QueuedAction = {};
 
     bool m_IsFreecam = false;
     bool m_InUpdate = false;
@@ -109,6 +116,7 @@ private:
     QTimer *m_RenderTimer = nullptr;
 
     //Cameras
+    SceneData *m_CurrentScene = nullptr;
     CameraData *m_CurrentCamera = nullptr;
 
     TextureManager *m_TextureLoader = nullptr;
@@ -119,8 +127,9 @@ private:
     MeshData *m_DebugMesh = nullptr;
 
 
+    QMatrix4x4 m_JointTransforms[100];
     QList<SceneObject *> m_LoadedOBJ = {};
-    QHash<eDebugKeyInputs, bool> m_PressedKeys = {};
+    QMap<eDebugKeyInputs, bool> m_PressedKeys = {};
 
     int m_DebugValue = 0;
 };

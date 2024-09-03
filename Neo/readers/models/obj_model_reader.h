@@ -1,10 +1,11 @@
 #ifndef OBJ_MODEL_READER_H
 #define OBJ_MODEL_READER_H
 
-#include <QHash>
+#include <QMap>
 #include <QString>
 
 #include <Neo/OpenGL/mesh_data.h>
+#include <Neo/scene/scene_object.h>
 
 class MtlModelReader
 {
@@ -13,7 +14,7 @@ public:
     MaterialData *GetMaterial(QString m_MatName);
 
 private:
-    QHash<QString, MaterialData*> m_Materials = {};
+    QMap<QString, MaterialData*> m_Materials = {};
 };
 
 class ObjModelReader //: public ModelReader
@@ -29,7 +30,7 @@ public:
 private:
     void ParseFile();
 
-    MeshData *ParseMeshData(QStringList l_verts, QStringList l_faces, QStringList l_uvs, int l_StartingVert);
+    MeshData *ParseMeshData(int l_StartingVert);
 
     QString m_FilePath = "";
     QString m_FileName = "";
@@ -37,7 +38,12 @@ private:
     QList<MeshData*> m_ParsedMeshData = {};
 
     QList<MtlModelReader *> m_MtlReaders = {};
-    QHash<int, QString> m_FaceMaterialIndex = {};
+    QMap<int, QString> m_FaceMaterialIndex = {};
+
+    QStringList m_LoadedLinesVertex = {};
+    QStringList m_LoadedLinesVertexTexCords = {};
+    QStringList m_LoadedLinesVertexNorms = {};
+    QStringList m_LoadedLinesFaces = {};
 };
 
 #endif // OBJ_MODEL_READER_H

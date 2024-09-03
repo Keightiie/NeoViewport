@@ -19,15 +19,10 @@ public:
     void SetOrthographicScale(double t_scale);
 
     void UpdateMatrix(int t_width, int t_height);
-    QMatrix4x4 GetProjectionMatrix();
+    QMatrix4x4 GetProjectionMatrix(bool l_caluclate);
     NeoTransform *GetTransform();
     QMatrix4x4 GetTransformMatrix();
 
-    void UpdateCamera(float t_width, float t_height);
-    void UpdateCameraOrtho(float t_width, float t_height);
-
-    void CameraCleanup();
-    void CameraCleanupOrtho();
 
 private:
     double l_OrthographicScale = 6.0;

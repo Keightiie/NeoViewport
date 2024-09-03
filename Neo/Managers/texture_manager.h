@@ -1,7 +1,7 @@
 #ifndef TEXTURE_MANAGER_H
 #define TEXTURE_MANAGER_H
 
-#include <QHash>
+#include <QMap>
 #include <QObject>
 #include <QOpenGLTexture>
 
@@ -14,7 +14,7 @@ public:
     QOpenGLTexture *GetTexture(QString l_path);
 
 private:
-    QHash<QString, QOpenGLTexture*> m_LoadedTextures = {};
+    QMap<QString, QOpenGLTexture*> m_LoadedTextures = {};
 };
 
 #endif // TEXTURE_MANAGER_H

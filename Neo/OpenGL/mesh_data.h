@@ -41,7 +41,10 @@ private:
 struct GLVertexData
 {
     QVector3D m_Position;
+    QVector3D m_Normals;
     QVector2D m_TexCoord;
+    QVector3D m_JointIndices = QVector3D(0, -1, -1);
+    QVector3D m_JointWeights = QVector3D(1, 0, 0);
 };
 
 struct GLMeshData
@@ -59,6 +62,7 @@ public:
 
     QVector4D getVerticiesIndex() { return m_VerticiesIndex; };
     QVector4D getTexCordsIndex() { return m_TexCordsIndex; };
+    QVector4D getNormsIndex() { return m_NormalsIndex; };
     QString getMaterialPath() { if (m_Material == nullptr) return ""; else return m_Material->getTexturePath(); };
     MaterialData *getMaterial() {return m_Material;};
 
@@ -67,6 +71,7 @@ public:
     QList<QVector3D> GetTexCords() { return m_TexCords; };
 
     void SetTexCordIndex(QVector4D t_index){m_TexCordsIndex = t_index;};
+    void SetNormalsIndex(QVector4D t_index){m_NormalsIndex = t_index;};
 
     void SetVerticies(QList<QVector3D> l_Verts)
     {
@@ -87,6 +92,7 @@ private:
 
     MaterialData *m_Material = nullptr;
     QVector4D m_VerticiesIndex = {0, 0, 0, 0};
+    QVector4D m_NormalsIndex = {0, 0, 0, 0};
     QVector4D m_TexCordsIndex = {-1, -1, -1, -1};
 
 };
@@ -107,6 +113,7 @@ public:
         return m_FacesFilterNoAlpha;
     }
     QList<QVector3D> getVertices() { return m_Vertices; }
+    QList<QVector3D> getNormals() { return m_Normals; }
     QList<QVector2D> getTexCords() { return m_TextureCords; }
     eFacesType getFaceType(){ return m_FaceType; }
 
@@ -115,7 +122,10 @@ public:
         m_Vertices = t_verts;
     }
 
+    void ProcessVertexList(QVector<GLVertexData> t_List, QString l_Texture);
+
     void SetTexCords(QList<QVector2D>  t_cords) { m_TextureCords = t_cords; }
+    void SetNormals(QList<QVector3D>  t_norms) { m_Normals = t_norms; }
     void SetFaces(QList<FaceData*>  t_faces){ m_Faces = t_faces; }
     void SetFaceType(eFacesType t_FaceType) { m_FaceType = t_FaceType; }
 
@@ -124,7 +134,7 @@ public:
     void CacheVertexBuffer();
 
     void Initialize();
-    void DrawMesh(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t_textureManager, int t_debug = 0);
+    void DrawMesh(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t_textureManager);
 
     QString GetMaterialPath();
 
@@ -133,9 +143,10 @@ private:
     QList<FaceData*> m_Faces = {};
     QList<FaceData*> m_FacesFilterAlpha = {};
     QList<FaceData*> m_FacesFilterNoAlpha = {};
-    QHash<int, QList<GLMeshData>> m_LoadOrder = {};
+    QMap<int, QList<GLMeshData>> m_LoadOrder = {};
 
     QList<QVector3D> m_Vertices = {};
+    QList<QVector3D> m_Normals = {};
     QList<QVector2D> m_TextureCords = {};
     QStringList m_TextureNames = {};
     QList<QOpenGLTexture *> m_Textures = {};
@@ -150,19 +161,6 @@ private:
     QOpenGLBuffer arrayBuf;
     QOpenGLBuffer indexBuf;
 
-};
-
-
-class SceneObject
-{
-public:
-    SceneObject(){};
-
-    QList<MeshData*> m_Mesh = {};
-
-    bool m_IsBillboard = false;
-    QVector3D m_Transform = QVector3D(0, 0, 0);
-    QVector3D m_Rotation = QVector3D(0, 0, 0);
 };
 
 

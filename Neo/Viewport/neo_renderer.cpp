@@ -7,9 +7,10 @@ NeoRenderer::NeoRenderer(int t_fps, QWidget *parent) : QOpenGLWidget{parent}
 
     QSurfaceFormat l_SurfaceFormat;
     l_SurfaceFormat.setSwapInterval(1);
-    l_SurfaceFormat.setSamples(4);
+    //l_SurfaceFormat.setSamples(4);
     setFormat(l_SurfaceFormat);
 
+    m_CurrentScene = new SceneData();
     m_TextureLoader = new TextureManager();
     m_CurrentCamera = new CameraData();
     if(t_fps != -1)
@@ -48,6 +49,15 @@ void NeoRenderer::ReleaseDebugKey(eDebugKeyInputs l_key)
 void NeoRenderer::SetCamera(CameraData *t_Camera)
 {
     m_CurrentCamera = t_Camera;
+    m_CurrentCamera->UpdateMatrix(width(), height());
+}
+
+void NeoRenderer::SetBoneMatrix(int l_BoneId, QMatrix4x4 l_matrix)
+{
+    if(l_BoneId > 0 && l_BoneId < 100)
+    {
+        m_JointTransforms[l_BoneId] = l_matrix;
+    }
 }
 
 void NeoRenderer::initializeGL()
@@ -214,18 +224,21 @@ void NeoRenderer::RendererUpdate()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-    m_ShaderProgram.setUniformValue("mvp_matrix", m_CurrentCamera->GetProjectionMatrix());// * matrix);
+    QMatrix4x4 l_ViewMatrix = m_CurrentCamera->GetProjectionMatrix(true);
+
+    m_ShaderProgram.setUniformValue("mvp_matrix", l_ViewMatrix);
+
+    QMatrix3x3 l_normalMatrix = m_CurrentCamera->GetProjectionMatrix(false).normalMatrix();
+    m_ShaderProgram.setUniformValue("normal_matrix", l_normalMatrix);
     m_ShaderProgram.setUniformValue("texture", 0);
 
-    m_CurrentCamera->UpdateCamera(width(), height());
+    m_ShaderProgram.setUniformValue("view_position", QVector3D(0.0f, 0.0f, 5.0f));
+    m_CurrentScene->UpdateShader(&m_ShaderProgram);
 
     for(SceneObject *l_ScenObj : m_LoadedOBJ)
     {
         if(l_ScenObj == nullptr) return;
-        for(MeshData *l_Mesh : l_ScenObj->m_Mesh)
-        {
-            l_Mesh->DrawMesh(&m_ShaderProgram, m_TextureLoader, m_DebugValue);
-        }
+        l_ScenObj->DrawObject(&m_ShaderProgram, m_TextureLoader);
     }
 
     m_InUpdate = false;
@@ -239,4 +252,14 @@ QVector3D NeoRenderer::GetTransform()
 QVector3D NeoRenderer::GetRotation()
 {
     return m_CurrentCamera->GetTransform()->GetRotation();
+}
+
+SceneData *NeoRenderer::GetScene()
+{
+    return m_CurrentScene;
+}
+
+CameraData *NeoRenderer::GetCamera()
+{
+    return m_CurrentCamera;
 }

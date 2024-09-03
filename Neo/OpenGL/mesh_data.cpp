@@ -10,6 +10,31 @@ MeshData::MeshData() : indexBuf(QOpenGLBuffer::IndexBuffer)
     indexBuf.create();
 }
 
+void MeshData::ProcessVertexList(QVector<GLVertexData> t_List, QString l_Texture)
+{
+
+    int l_StartValue = m_GLVertices.count();
+    m_GLVertices.append(t_List);
+
+    int m_texId = -1;
+
+    if (l_Texture.trimmed().isEmpty())
+    {
+        m_texId = -1;
+    }
+    else if(m_TextureNames.contains(l_Texture))
+    {
+        m_texId = m_TextureNames.indexOf(l_Texture);
+    }
+    else
+    {
+        m_TextureNames.append(l_Texture);
+        m_texId = m_TextureNames.indexOf(l_Texture);
+    }
+
+    m_LoadOrder[m_texId].append({l_StartValue, t_List.count()});
+}
+
 void MeshData::CreateDebugCube()
 {
     //This is function no longer works correctly due to API changes.
@@ -100,10 +125,16 @@ void MeshData::CacheVertexBuffer()
 
         QVector4D r_index = r_face->getVerticiesIndex();
         QVector4D r_TexIndex = r_face->getTexCordsIndex();
+        QVector4D r_NormsIndex = r_face->getNormsIndex();
 
         QVector3D l_Vert1 = l_verticies.at(r_index.x());
         QVector3D l_Vert2 = l_verticies.at(r_index.y());
         QVector3D l_Vert3 = l_verticies.at(r_index.z());
+
+        QVector3D l_VertNormal1 = (r_NormsIndex.x() != -1) ? getNormals().at(r_NormsIndex.x()) : QVector3D();
+        QVector3D l_VertNormal2 = (r_NormsIndex.y() != -1) ? getNormals().at(r_NormsIndex.y()) : QVector3D();
+        QVector3D l_VertNormal3 = (r_NormsIndex.z() != -1) ? getNormals().at(r_NormsIndex.z()) : QVector3D();
+
 
         QVector2D l_VertUV1 = (r_TexIndex.x() != -1) ? getTexCords().at(r_TexIndex.x()) : QVector2D();
         QVector2D l_VertUV2 = (r_TexIndex.y() != -1) ? getTexCords().at(r_TexIndex.y()) : QVector2D();
@@ -111,12 +142,15 @@ void MeshData::CacheVertexBuffer()
 
 
         //VBO
-        m_GLVertices.append({l_Vert1, l_VertUV1});
-        m_GLVertices.append({l_Vert2, l_VertUV2});
-        m_GLVertices.append({l_Vert3, l_VertUV3});
+        m_GLVertices.append({l_Vert1, l_VertNormal1, l_VertUV1});
+        m_GLVertices.append({l_Vert2, l_VertNormal2, l_VertUV2});
+        m_GLVertices.append({l_Vert3, l_VertNormal3, l_VertUV3});
 
         l_FaceCount += 1;
     }
+
+
+    m_LoadOrder[l_CurrentTextureId].append({l_FaceStartingValue, l_FaceCount * 3});
 
     Initialize();
 
@@ -128,7 +162,7 @@ void MeshData::Initialize()
     arrayBuf.allocate(m_GLVertices.constData(), m_GLVertices.size() * sizeof(GLVertexData));
 }
 
-void MeshData::DrawMesh(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t_textureManager, int t_debug)
+void MeshData::DrawMesh(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t_textureManager)
 {
     if(m_Textures.isEmpty())
     {
@@ -151,11 +185,27 @@ void MeshData::DrawMesh(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t
 
     offset += sizeof(QVector3D);
 
+    int normalLocation = t_shaderProgram->attributeLocation("a_normal");
+    t_shaderProgram->enableAttributeArray(normalLocation);
+    t_shaderProgram->setAttributeBuffer(normalLocation, GL_FLOAT, offset, 3, sizeof(GLVertexData));
+
+    offset += sizeof(QVector3D);
+
     int texcoordLocation = t_shaderProgram->attributeLocation("a_texcoord");
     t_shaderProgram->enableAttributeArray(texcoordLocation);
     t_shaderProgram->setAttributeBuffer(texcoordLocation, GL_FLOAT, offset, 2, sizeof(GLVertexData));
 
-    //glDrawArrays(GL_TRIANGLES, t_debug, m_GLVertices.size());
+    offset += sizeof(QVector2D);
+
+    int jointIndexLocation = t_shaderProgram->attributeLocation("a_jointIndices");
+    t_shaderProgram->enableAttributeArray(jointIndexLocation);
+    t_shaderProgram->setAttributeBuffer(jointIndexLocation, GL_FLOAT, offset, 3, sizeof(GLVertexData));
+
+    offset += sizeof(QVector3D);
+
+    int weightsLocation = t_shaderProgram->attributeLocation("a_weights");
+    t_shaderProgram->enableAttributeArray(weightsLocation);
+    t_shaderProgram->setAttributeBuffer(weightsLocation, GL_FLOAT, offset, 2, sizeof(GLVertexData));
 
     for (int i = 0; i < m_Textures.count(); i++)
     {
