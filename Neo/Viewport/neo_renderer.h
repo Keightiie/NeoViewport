@@ -36,22 +36,12 @@ class NeoRenderer : public QOpenGLWidget, protected QOpenGLFunctions
     Q_OBJECT
 public:
     using QOpenGLWidget::QOpenGLWidget;
-    NeoRenderer(int t_fps, QWidget *parent = nullptr);
+    NeoRenderer(SceneData *l_Scene, int t_fps, QWidget *parent = nullptr);
 
     void RendererUpdate();
-    void DisableAutoUpdates();
-    void EnableAutoUpdates();
 
     //Remove?
     void WaitForUpdateFinish();
-
-    //To-Do: Create a UserInterface system instead.
-    void SetOverlay(QString t_overlay);
-    void SetDebugValue(int l_dbg);
-
-    //To-Do: Rename to ClearScene();
-    void ClearViewport();
-    void LoadSceneObject(SceneObject *t_ScnObject);
 
     // Input (Temporary)
     void ToggleFreecam(bool t_toggle);
@@ -60,7 +50,6 @@ public:
     void ReleaseDebugKey(eDebugKeyInputs l_key);
 
     void SetCamera(CameraData *t_Camera);
-    void SetBoneMatrix(int l_BoneId, QMatrix4x4 l_matrix);
 
 public:
     //Setting
@@ -77,6 +66,7 @@ public:
     QVector3D GetTransform();
     QVector3D GetRotation();
 
+    void setScene(SceneData * l_scene);
     SceneData *GetScene();
     CameraData *GetCamera();
 
@@ -97,40 +87,24 @@ private:
     void RenderBackground(QString l_Background);
     void RenderBackground(QMatrix4x4 l_BoneTransform);
 
-    //Other
-    bool WithinFOV(QVector3D l_Object);
-
     double DistanceFromCamera(const QVector3D& t_CameraPosition, const QVector3D& t_VertexPosition);
 
 private slots:
     void RendererLoop();
 
 private:
+    bool m_InUpdate = false;
     QMap<QString, bool> m_QueuedAction = {};
 
-    bool m_IsFreecam = false;
-    bool m_InUpdate = false;
-    bool m_AutoUpdate = true;
+    SceneData *m_CurrentScene = nullptr;
+    TextureManager *m_TextureLoader = nullptr;
+    QOpenGLShaderProgram m_ShaderProgram;
 
     //Rendering
     QTimer *m_RenderTimer = nullptr;
 
-    //Cameras
-    SceneData *m_CurrentScene = nullptr;
-    CameraData *m_CurrentCamera = nullptr;
-
-    TextureManager *m_TextureLoader = nullptr;
-
-    QString m_OverlayImage = "";
-    QOpenGLShaderProgram m_ShaderProgram;
-
-    MeshData *m_DebugMesh = nullptr;
-
-
-    QMatrix4x4 m_JointTransforms[100];
-    QList<SceneObject *> m_LoadedOBJ = {};
+    //TO-DO: Move to a seperate "DebugCamera" class.
+    bool m_IsFreecam = false;
     QMap<eDebugKeyInputs, bool> m_PressedKeys = {};
-
-    int m_DebugValue = 0;
 };
 #endif // NEO_RENDERER_H

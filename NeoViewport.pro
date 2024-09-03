@@ -17,6 +17,7 @@ SOURCES += \
     Neo/Managers/texture_manager.cpp \
     Neo/OpenGL/bone_data.cpp \
     Neo/OpenGL/camera_data.cpp \
+    Neo/OpenGL/free_camera.cpp \
     Neo/OpenGL/keyframe_data.cpp \
     Neo/OpenGL/mesh_data.cpp \
     Neo/Viewport/neo_renderer.cpp \
@@ -34,6 +35,7 @@ HEADERS += \
     Neo/Managers/texture_manager.h \
     Neo/OpenGL/bone_data.h \
     Neo/OpenGL/camera_data.h \
+    Neo/OpenGL/free_camera.h \
     Neo/OpenGL/keyframe_data.h \
     Neo/OpenGL/mesh_data.h \
     Neo/Viewport/neo_renderer.h \

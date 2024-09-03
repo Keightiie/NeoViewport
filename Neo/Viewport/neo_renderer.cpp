@@ -2,17 +2,16 @@
 
 #include <QOpenGLTexture>
 
-NeoRenderer::NeoRenderer(int t_fps, QWidget *parent) : QOpenGLWidget{parent}
+NeoRenderer::NeoRenderer(SceneData *l_Scene, int t_fps, QWidget *parent) : QOpenGLWidget{parent}
 {
 
     QSurfaceFormat l_SurfaceFormat;
-    l_SurfaceFormat.setSwapInterval(1);
+    l_SurfaceFormat.setSwapInterval(2);
     //l_SurfaceFormat.setSamples(4);
     setFormat(l_SurfaceFormat);
 
-    m_CurrentScene = new SceneData();
+    m_CurrentScene = l_Scene;
     m_TextureLoader = new TextureManager();
-    m_CurrentCamera = new CameraData();
     if(t_fps != -1)
     {
         m_RenderTimer = new QTimer(this);
@@ -21,10 +20,6 @@ NeoRenderer::NeoRenderer(int t_fps, QWidget *parent) : QOpenGLWidget{parent}
     }
 }
 
-void NeoRenderer::LoadSceneObject(SceneObject *t_ScnObject)
-{
-    m_LoadedOBJ.append(t_ScnObject);
-}
 
 void NeoRenderer::ToggleFreecam(bool t_toggle)
 {
@@ -48,38 +43,24 @@ void NeoRenderer::ReleaseDebugKey(eDebugKeyInputs l_key)
 
 void NeoRenderer::SetCamera(CameraData *t_Camera)
 {
-    m_CurrentCamera = t_Camera;
-    m_CurrentCamera->UpdateMatrix(width(), height());
-}
-
-void NeoRenderer::SetBoneMatrix(int l_BoneId, QMatrix4x4 l_matrix)
-{
-    if(l_BoneId > 0 && l_BoneId < 100)
-    {
-        m_JointTransforms[l_BoneId] = l_matrix;
-    }
+    m_CurrentScene->CameraSet(t_Camera);
+    m_CurrentScene->getCamera()->UpdateMatrix(width(), height());
 }
 
 void NeoRenderer::initializeGL()
 {
-    //glEnable(GL_MULTISAMPLE);
     initializeOpenGLFunctions();
-
     initShaders();
     initTextures();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-
-
-    m_DebugMesh = new MeshData();
-    m_DebugMesh->Initialize();
 }
 
 void NeoRenderer::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
-    m_CurrentCamera->UpdateMatrix(w, h);
+    m_CurrentScene->getCamera()->UpdateMatrix(w, h);
 }
 
 void NeoRenderer::paintGL()
@@ -161,52 +142,27 @@ double NeoRenderer::DistanceFromCamera(const QVector3D &t_CameraPosition, const 
 
 void NeoRenderer::TranslateTransform(QVector3D t_Transform)
 {
-    m_CurrentCamera->GetTransform()->TranslatePosition(t_Transform);
+    m_CurrentScene->getCamera()->GetTransform()->TranslatePosition(t_Transform);
 }
 
 void NeoRenderer::TranslateRotation(QVector3D t_Transform)
 {
-    m_CurrentCamera->GetTransform()->TranslateRotation(t_Transform);
+    m_CurrentScene->getCamera()->GetTransform()->TranslateRotation(t_Transform);
 }
 
 void NeoRenderer::SetTransform(QVector3D t_Transform)
 {
-    m_CurrentCamera->GetTransform()->SetPosition(t_Transform);
+    m_CurrentScene->getCamera()->GetTransform()->SetPosition(t_Transform);
 }
 
 void NeoRenderer::SetRotation(QVector3D t_Transform)
 {
-    m_CurrentCamera->GetTransform()->SetRotation(t_Transform);
-}
-
-void NeoRenderer::SetOverlay(QString t_overlay)
-{
-    m_OverlayImage = t_overlay;
-}
-
-void NeoRenderer::SetDebugValue(int l_dbg)
-{
-    m_DebugValue = l_dbg;
+    m_CurrentScene->getCamera()->GetTransform()->SetRotation(t_Transform);
 }
 
 bool NeoRenderer::IsRendering()
 {
-    return m_LoadedOBJ.count() > 0;
-}
-
-void NeoRenderer::DisableAutoUpdates()
-{
-    m_AutoUpdate = false;
-}
-
-void NeoRenderer::EnableAutoUpdates()
-{
-    m_AutoUpdate = true;
-}
-
-void NeoRenderer::ClearViewport()
-{
-    m_LoadedOBJ.clear();
+    return m_CurrentScene->getGameObjectsCount() > 0;
 }
 
 void NeoRenderer::WaitForUpdateFinish()
@@ -223,35 +179,24 @@ void NeoRenderer::RendererUpdate()
     m_InUpdate = true;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-    QMatrix4x4 l_ViewMatrix = m_CurrentCamera->GetProjectionMatrix(true);
-
-    m_ShaderProgram.setUniformValue("mvp_matrix", l_ViewMatrix);
-
-    QMatrix3x3 l_normalMatrix = m_CurrentCamera->GetProjectionMatrix(false).normalMatrix();
-    m_ShaderProgram.setUniformValue("normal_matrix", l_normalMatrix);
-    m_ShaderProgram.setUniformValue("texture", 0);
-
-    m_ShaderProgram.setUniformValue("view_position", QVector3D(0.0f, 0.0f, 5.0f));
-    m_CurrentScene->UpdateShader(&m_ShaderProgram);
-
-    for(SceneObject *l_ScenObj : m_LoadedOBJ)
-    {
-        if(l_ScenObj == nullptr) return;
-        l_ScenObj->DrawObject(&m_ShaderProgram, m_TextureLoader);
-    }
+    m_CurrentScene->Render(&m_ShaderProgram, m_TextureLoader);
 
     m_InUpdate = false;
 }
 
 QVector3D NeoRenderer::GetTransform()
 {
-    return m_CurrentCamera->GetTransform()->GetPosition();
+    return m_CurrentScene->getCamera()->GetTransform()->GetPosition();
 }
 
 QVector3D NeoRenderer::GetRotation()
 {
-    return m_CurrentCamera->GetTransform()->GetRotation();
+    return m_CurrentScene->getCamera()->GetTransform()->GetRotation();
+}
+
+void NeoRenderer::setScene(SceneData *l_scene)
+{
+    m_CurrentScene = l_scene;
 }
 
 SceneData *NeoRenderer::GetScene()
@@ -261,5 +206,5 @@ SceneData *NeoRenderer::GetScene()
 
 CameraData *NeoRenderer::GetCamera()
 {
-    return m_CurrentCamera;
+    return m_CurrentScene->getCamera();
 }
