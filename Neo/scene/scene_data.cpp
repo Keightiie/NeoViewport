@@ -64,6 +64,11 @@ void SceneData::GameObjectsAdd(SceneObject *l_Object)
     m_GameObjects.append(l_Object);
 }
 
+QList<SceneObject *> SceneData::getGameObjects()
+{
+    return m_GameObjects;
+}
+
 int SceneData::getGameObjectsCount()
 {
     return m_GameObjects.count();

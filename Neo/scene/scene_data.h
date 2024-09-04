@@ -30,6 +30,7 @@ public:
     //Game Objects
     void GameObjectsClear();
     void GameObjectsAdd(SceneObject *l_Object);
+    QList<SceneObject *> getGameObjects();
     int getGameObjectsCount();
 
     virtual void Render(QOpenGLShaderProgram *t_shaderProgram, TextureManager *t_textureManager);

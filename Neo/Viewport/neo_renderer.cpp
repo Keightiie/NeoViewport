@@ -4,12 +4,6 @@
 
 NeoRenderer::NeoRenderer(SceneData *l_Scene, int t_fps, QWidget *parent) : QOpenGLWidget{parent}
 {
-
-    QSurfaceFormat l_SurfaceFormat;
-    l_SurfaceFormat.setSwapInterval(2);
-    //l_SurfaceFormat.setSamples(4);
-    setFormat(l_SurfaceFormat);
-
     m_CurrentScene = l_Scene;
     m_TextureLoader = new TextureManager();
     if(t_fps != -1)
@@ -53,6 +47,7 @@ void NeoRenderer::initializeGL()
     initShaders();
     initTextures();
 
+    glClearColor(0.11764705882f, 0.13725490196f, 0.19607843137f, 1.00f);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 }
@@ -65,9 +60,6 @@ void NeoRenderer::resizeGL(int w, int h)
 
 void NeoRenderer::paintGL()
 {
-    glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
     RendererUpdate();
 }
 
@@ -177,7 +169,8 @@ void NeoRenderer::RendererUpdate()
     if(m_IsFreecam) UpdateFreeCam();
 
     m_InUpdate = true;
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glClear(GL_COLOR_BUFFER_BIT);
 
     m_CurrentScene->Render(&m_ShaderProgram, m_TextureLoader);
 
@@ -197,6 +190,10 @@ QVector3D NeoRenderer::GetRotation()
 void NeoRenderer::setScene(SceneData *l_scene)
 {
     m_CurrentScene = l_scene;
+    if(m_CurrentScene->getCamera() != nullptr)
+    {
+        m_CurrentScene->getCamera()->UpdateMatrix(width(), height());
+    }
 }
 
 SceneData *NeoRenderer::GetScene()
